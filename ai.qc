@@ -285,27 +285,6 @@ void() ChangeYaw =
 
 //============================================================================
 
-void() HuntTarget =
-{
-    self.goalentity = self.enemy;
-    self.think = self.th_run;
-    self.ideal_yaw = vectoyaw(self.enemy.origin - self.origin);
-    self.nextthink = time + 0.1;
-    SUB_AttackFinished (1);	// wait a while before first attack
-};
-
-//Dan Cochran 2020
-void() TrackPlayer =
-{
-    self.goalentity = self.enemy;
-    self.think = self.th_converse;
-    self.ideal_yaw = vectoyaw(self.enemy.origin - self.origin);
-    self.nextthink = time + 0.1;
-    centerprint(self.enemy, "Hello, friend!");
-    sound (other, CHAN_VOICE, "misc/talk.wav", 1, ATTN_NORM);
-    //dprint("friendmode activated\n");
-}
-
 void() SightSound =
 {
 local float	rsnd;
@@ -348,6 +327,18 @@ local float	rsnd;
         sound (self, CHAN_VOICE, "shalrath/sight.wav", 1, ATTN_NORM);
 };
 
+//Dan Cochran 2020
+void() TrackPlayer =
+{
+    self.goalentity = self.enemy;
+    self.think = self.th_run; //Run to meet player
+
+    self.ideal_yaw = vectoyaw(self.enemy.origin - self.origin);
+    self.nextthink = time + 0.1;
+    self.converse_action (ACT_CHASE);
+    //dprint("friendmode activated\n");
+}
+
 void() FoundTarget =
 {
     if (self.enemy.classname == "player")
@@ -358,7 +349,7 @@ void() FoundTarget =
     
     self.show_hostile = time + 1;		// wake up other monsters
 
-    SightSound ();
+    //SightSound ();
     //HuntTarget ();
     TrackPlayer ();
 };
@@ -385,24 +376,9 @@ float() FindTarget =
     local entity	client;
     local float		r;
 
-// if the first spawnflag bit is set, the monster will only wake up on
-// really seeing the player, not another monster getting angry
-
-// spawnflags & 3 is a big hack, because zombie crucified used the first
-// spawn flag prior to the ambush flag, and I forgot about it, so the second
-// spawn flag works as well
-    if (sight_entity_time >= time - 0.1 && !(self.spawnflags & 3) )
-    {
-        client = sight_entity;
-        if (client.enemy == self.enemy)
-            return;
-    }
-    else
-    {
-        client = checkclient ();
-        if (!client)
-            return FALSE;	// current check entity isn't in PVS
-    }
+    client = checkclient ();
+    if (!client)
+        return FALSE;	// current check entity isn't in PVS
 
     if (client == self.enemy)
         return FALSE;
@@ -413,21 +389,17 @@ float() FindTarget =
         return FALSE;
 
     r = range (client);
-    if (r == RANGE_FAR)
+    if (r == RANGE_FAR || r == RANGE_MID)
         return FALSE;
         
     if (!visible (client))
         return FALSE;
 
-    if (r == RANGE_NEAR)
+    if (r != RANGE_MELEE)
     {
-        if (client.show_hostile < time && !infront (client))
+        if (self.passive || !infront (client)) {
             return FALSE;
-    }
-    else if (r == RANGE_MID)
-    {
-        if ( /* client.show_hostile < time || */ !infront (client))
-            return FALSE;
+        }
     }
     
 //
@@ -481,21 +453,11 @@ float() NoticeCloseFriend =
         return FALSE;
 
     r = range (client);
-    if (r == RANGE_FAR)
+    if (r != RANGE_MELEE)
         return FALSE;
         
     if (!visible (client))
         return FALSE;
-
-    if (r == RANGE_NEAR)
-    {
-        return FALSE;
-    }
-    else if (r == RANGE_MID)
-    {
-        return FALSE;
-    }
-    
 //
 // got one
 //
@@ -514,7 +476,6 @@ float() NoticeCloseFriend =
 
     return TRUE;
 };
-
 
 //=============================================================================
 
@@ -539,14 +500,6 @@ stagger back a bit
 void(float dist) ai_pain =
 {
     ai_back (dist);
-/*
-    local float	away;
-    
-    away = anglemod (vectoyaw (self.origin - self.enemy.origin) 
-    + 180*(random()- 0.5) );
-    
-    walkmove (away, dist);
-*/
 };
 
 /*
@@ -570,17 +523,9 @@ The monster is walking it's beat
 */
 void(float dist) ai_walk =
 {
-    local vector		mtemp;
-    
     movedist = dist;
-    
-    if (self.classname == "monster_dragon")
-    {
-        movetogoal (dist);
-        return;
-    }
-    // check for noticing a player
-    if (NoticeCloseFriend ())
+
+    if (FindTarget ())
         return;
 
     movetogoal (dist);
@@ -591,12 +536,12 @@ void(float dist) ai_walk =
 =============
 ai_stand
 
-The monster is staying in one place for a while, with slight angle turns
+The monster is staying in one place for a while
 =============
 */
 void() ai_stand =
 {
-    if (NoticeCloseFriend ())
+    if (FindTarget ())
         return;
     
     if (time > self.pausetime)
@@ -604,9 +549,6 @@ void() ai_stand =
         self.th_walk ();
         return;
     }
-    
-// change angle slightly
-
 };
 
 /*
@@ -768,7 +710,7 @@ void() ai_run_slide =
 =============
 ai_run
 
-The monster has an enemy it is trying to kill
+The monster has an ememy it wants to run after.
 =============
 */
 void(float dist) ai_run =
@@ -782,61 +724,39 @@ void(float dist) ai_run =
     if (self.enemy.health <= 0)
     {
         self.enemy = world;
-    // FIXME: look all around for other targets
-        if (self.oldenemy.health > 0)
-        {
-            self.enemy = self.oldenemy;
-            HuntTarget ();
-        }
+        self.goalentity = self.movetarget;
+        if (self.movetarget)
+            self.th_walk ();
         else
-        {
-            if (self.movetarget)
-                self.th_walk ();
-            else
-                self.th_stand ();
-            return;
-        }
+            self.th_stand ();
+        return;
     }
-
-    self.show_hostile = time + 1;		// wake up other monsters
 
 // check knowledge of enemy
     enemy_vis = visible(self.enemy);
     if (enemy_vis)
         self.search_time = time + 5;
 
-// look for other coop players
-    if (coop && self.search_time < time)
-    {
-        if (FindTarget ())
-            return;
-    }
-
     enemy_infront = infront(self.enemy);
     enemy_range = range(self.enemy);
     enemy_yaw = vectoyaw(self.enemy.origin - self.origin);
-    
-    if (self.attack_state == AS_MISSILE)
-    {
-//dprint ("ai_run_missile\n");
-        ai_run_missile ();
-        return;
-    }
-    if (self.attack_state == AS_MELEE)
-    {
-//dprint ("ai_run_melee\n");
-        ai_run_melee ();
-        return;
-    }
 
-    if (CheckAnyAttack ())
-        return;					// beginning an attack
-        
-    if (self.attack_state == AS_SLIDING)
-    {
-        ai_run_slide ();
+    if (enemy_range == RANGE_MELEE && enemy_vis) {
+        self.converse_action(ACT_GREET);
+        self.th_converse ();
+        return;		
+    } else if (self.passive) {
+        self.enemy = world;
+        self.goalentity = self.movetarget;
+        if (self.movetarget) {
+            self.th_walk ();
+        }
+        else {
+            self.th_stand ();
+        }
         return;
     }
+        			
         
 // head straight in
     movetogoal (dist);		// done in C code...
@@ -878,20 +798,24 @@ void() ai_converse =
     enemy_range = range(self.enemy);
     enemy_yaw = vectoyaw(self.enemy.origin - self.origin);
 
+
     if (enemy_range != RANGE_MELEE) {
-        self.enemy = world;
-        self.goalentity = self.movetarget;
-        if (self.movetarget) {
-            self.th_walk ();
+        if (self.passive) {
+            self.enemy = world;
+            self.goalentity = self.movetarget;
+            if (self.movetarget) {
+                self.th_walk ();
+            }
+            else {
+                self.th_stand ();
+            }
+            self.converse_action(ACT_BYE);
+            return;
+        } else {
+            self.th_run ();
+            self.converse_action(ACT_CHASE);
         }
-        else {
-            self.th_stand ();
-        }
-        sound (self, CHAN_VOICE, "soldier/idle.wav", 1, ATTN_IDLE);
-        entity client = checkclient();
-        centerprint(client, "Goodbye!");
-        sound (other, CHAN_VOICE, "misc/talk.wav", 1, ATTN_NORM);
-        return;
+
     }
 
     ai_face();

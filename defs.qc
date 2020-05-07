@@ -244,6 +244,8 @@ void		end_sys_fields;			// flag for structure dumping
 
 float	FALSE					= 0;
 float 	TRUE					= 1;
+float	false					= 0;
+float 	true					= 1;
 
 // edict.flags
 float	FL_FLY					= 1;
@@ -458,6 +460,12 @@ float		skill;
 .void()		th_melee;
 .void(entity attacker, float damage)		th_pain;
 .void()		th_die;
+
+float	ACT_GREET	= 1;
+float	ACT_CHASE	= 2;
+float	ACT_BYE		= 3;
+float	ACT_EMOTE	= 4;
+.void(float action)		converse_action;
 
 .entity		oldenemy;		// mad at this player before taking damage
 

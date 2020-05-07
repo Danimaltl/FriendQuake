@@ -183,7 +183,8 @@ void(entity targ, entity inflictor, entity attacker, float damage) T_Damage=
 		
 // do the damage
 	//targ.health = targ.health - take;
-			
+	targ.passive = true; //Will stop following you
+
 	if (targ.health <= 0)
 	{
 		Killed (targ, attacker);

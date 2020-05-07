@@ -268,6 +268,26 @@ void() army_die =
 		army_cdie1 ();
 };
 
+void(float action) ArmyAction = {
+	entity client = checkclient();
+	if (action == ACT_GREET) {
+		sound (self, CHAN_VOICE, "soldier/sight1.wav", 1, ATTN_IDLE);
+		centerprint(client, "Hello, friend!");
+    	sound (other, CHAN_VOICE, "misc/talk.wav", 1, ATTN_NORM);
+	} else if (action == ACT_CHASE) {
+		sound (self, CHAN_VOICE, "soldier/sight1.wav", 1, ATTN_IDLE);
+		centerprint(client, "Hey you!");
+    	sound (other, CHAN_VOICE, "misc/talk.wav", 1, ATTN_NORM);
+	} else if (action == ACT_BYE) {
+		sound (self, CHAN_VOICE, "soldier/idle.wav", 1, ATTN_IDLE);
+		centerprint(client, "Goodbye!");
+    	sound (other, CHAN_VOICE, "misc/talk.wav", 1, ATTN_NORM);
+	} else if (action == ACT_EMOTE) {
+		sound (self, CHAN_VOICE, "soldier/death1.wav", 1, ATTN_IDLE);
+		centerprint(client, "Ouch!");
+    	sound (other, CHAN_VOICE, "misc/talk.wav", 1, ATTN_NORM);
+	}
+}
 
 /*QUAKED monster_army (1 0 0) (-16 -16 -24) (16 16 40) Ambush
 */
@@ -301,6 +321,9 @@ void() monster_army =
 
 	setsize (self, '-16 -16 -24', '16 16 40');
 	self.health = 30;
+	self.passive = true;
+
+	self.converse_action = ArmyAction;
 
 	self.th_converse = army_converse1; //Dan Cochran 2020
 	self.th_stand = army_stand1;

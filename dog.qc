@@ -129,6 +129,16 @@ void() dog_stand7	=[	$stand7,	dog_stand8	] {ai_stand();};
 void() dog_stand8	=[	$stand8,	dog_stand9	] {ai_stand();};
 void() dog_stand9	=[	$stand9,	dog_stand1	] {ai_stand();};
 
+void() dog_converse1	=[	$stand1,	dog_converse2	] {ai_converse();};
+void() dog_converse2	=[	$stand2,	dog_converse3	] {ai_converse();};
+void() dog_converse3	=[	$stand3,	dog_converse4	] {ai_converse();};
+void() dog_converse4	=[	$stand4,	dog_converse5	] {ai_converse();};
+void() dog_converse5	=[	$stand5,	dog_converse6	] {ai_converse();};
+void() dog_converse6	=[	$stand6,	dog_converse7	] {ai_converse();};
+void() dog_converse7	=[	$stand7,	dog_converse8	] {ai_converse();};
+void() dog_converse8	=[	$stand8,	dog_converse9	] {ai_converse();};
+void() dog_converse9	=[	$stand9,	dog_converse1	] {ai_converse();};
+
 void() dog_walk1	=[	$walk1 ,	dog_walk2	] {
 if (random() < 0.2)
 	sound (self, CHAN_VOICE, "dog/idle.wav", 1, ATTN_IDLE);
@@ -339,6 +349,18 @@ float()	DogCheckAttack =
 	return FALSE;
 };
 
+void(float action) DogAction = {
+	if (action == ACT_GREET) {
+		sound (self, CHAN_VOICE, "dog/idle.wav", 1, ATTN_IDLE);
+	} else if (action == ACT_CHASE) {
+		sound (self, CHAN_VOICE, "dog/d_sight.wav", 1, ATTN_IDLE);
+	} else if (action == ACT_BYE) {
+		sound (self, CHAN_VOICE, "dog/idle.wav", 1, ATTN_IDLE);
+	} else if (action == ACT_EMOTE) {
+		sound (self, CHAN_VOICE, "dog/idle.wav", 1, ATTN_IDLE);
+		ThrowGib ("progs/gib3.mdl", self.health);
+	}
+}
 
 //===========================================================================
 
@@ -368,7 +390,11 @@ void() monster_dog =
 
 	setsize (self, '-32 -32 -24', '32 32 40');
 	self.health = 25;
+	self.passive = false;
 
+	self.converse_action = DogAction;
+
+	self.th_converse = dog_converse1;
 	self.th_stand = dog_stand1;
 	self.th_walk = dog_walk1;
 	self.th_run = dog_run1;
